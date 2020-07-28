@@ -163,7 +163,8 @@ void PropheseeWrapperPublisher::startPublishing() {
     if (publish_extTrigger_)
         publishExtTrigger();
 
-    ros::Rate loop_rate(5);
+    ros::Rate loop_rate(100);
+
     while(ros::ok()) {
         /** Get the current max_event_rate (dynamic configuration) **/
         int new_max_event_rate; 
@@ -194,7 +195,50 @@ void PropheseeWrapperPublisher::startPublishing() {
             cam_info_msg_.header.stamp = ros::Time::now();
             pub_info_.publish(cam_info_msg_);
         }
+
+        processEventBuffer();
+
         loop_rate.sleep();
+    }
+}
+
+void PropheseeWrapperPublisher::processEventBuffer()
+{
+     if ((event_buffer_current_time_ - event_buffer_start_time_) >= event_delta_t_){
+        std::unique_lock<std::mutex> lck (event_buffer_mutex_);
+        ROS_DEBUG("CD data available, buffer size: %d", static_cast<int>(event_buffer_.size()));
+        
+        /** Create the message **/
+        prophesee_event_msgs::EventArray event_buffer_msg;
+
+        // Sensor geometry in header of the message
+        event_buffer_msg.header.stamp = event_buffer_current_time_;
+        event_buffer_msg.height = camera_.geometry().height();
+        event_buffer_msg.width = camera_.geometry().width();
+
+        /** Set the buffer size for the msg **/
+        event_buffer_msg.events.resize(event_buffer_.size());
+
+        // Copy the events to the ros buffer format
+        auto buffer_msg_it = event_buffer_msg.events.begin();
+        for (const Prophesee::EventCD *it = std::addressof(event_buffer_[0]);
+                                    it != std::addressof(event_buffer_[event_buffer_.size()]);
+                                    ++it, ++buffer_msg_it)
+        {
+            prophesee_event_msgs::Event &event = *buffer_msg_it;
+            event.x = it->x;
+            event.y = it->y;
+            event.polarity = it->p;
+            event.ts.fromNSec(start_timestamp_.toNSec() + (it->t * 1000.00));
+        }
+
+        // Publish the message
+        pub_cd_events_.publish(event_buffer_msg);
+
+        // Clen the buffer for the next itteration
+        event_buffer_.clear();
+
+        ROS_DEBUG("CD data available, buffer size: %d at time: %lui", static_cast<int>(event_buffer_msg.events.size()), event_buffer_msg.header.stamp.toNSec());
     }
 }
 
@@ -208,6 +252,7 @@ void PropheseeWrapperPublisher::publishCDEvents() {
                     return;
 
                 if (ev_begin < ev_end) {
+                    std::unique_lock<std::mutex> lck (event_buffer_mutex_);
                     // Compute the current local buffer size with new CD events
                     const unsigned int buffer_size = ev_end - ev_begin;
 
@@ -228,40 +273,6 @@ void PropheseeWrapperPublisher::publishCDEvents() {
 
                     /** Get the last time stamp **/
                     event_buffer_current_time_.fromNSec(start_timestamp_.toNSec() + (ev_end-1)->t * 1000.00);
-                }
-
-                if ((event_buffer_current_time_ - event_buffer_start_time_) >= event_delta_t_){
-                    /** Create the message **/
-                    prophesee_event_msgs::EventArray event_buffer_msg;
-
-                    // Sensor geometry in header of the message
-                    event_buffer_msg.header.stamp = event_buffer_current_time_;
-                    event_buffer_msg.height = camera_.geometry().height();
-                    event_buffer_msg.width = camera_.geometry().width();
-
-                    /** Set the buffer size for the msg **/
-                    event_buffer_msg.events.resize(event_buffer_.size());
-
-                    // Copy the events to the ros buffer format
-                    auto buffer_msg_it = event_buffer_msg.events.begin();
-                    for (const Prophesee::EventCD *it = std::addressof(event_buffer_[0]);
-                                                it != std::addressof(event_buffer_[event_buffer_.size()]);
-                                                ++it, ++buffer_msg_it)
-                    {
-                        prophesee_event_msgs::Event &event = *buffer_msg_it;
-                        event.x = it->x;
-                        event.y = it->y;
-                        event.polarity = it->p;
-                        event.ts.fromNSec(start_timestamp_.toNSec() + (it->t * 1000.00));
-                    }
-
-                    // Publish the message
-                    pub_cd_events_.publish(event_buffer_msg);
-
-                    // Clen the buffer for the next itteration
-                    event_buffer_.clear();
-
-                    ROS_DEBUG("CD data available, buffer size: %d at time: %lui", static_cast<int>(event_buffer_msg.events.size()), event_buffer_msg.header.stamp.toNSec());
                 }
 
             });

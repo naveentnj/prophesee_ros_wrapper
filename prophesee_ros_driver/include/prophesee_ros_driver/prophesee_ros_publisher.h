@@ -7,6 +7,11 @@
 #ifndef PROPHESEE_ROS_PUBLISHER_H_
 #define PROPHESEE_ROS_PUBLISHER_H_
 
+#include <deque>
+#include <mutex>
+#include <ros/ros.h>
+#include <prophesee_event_msgs/Event.h>
+
 #include <sensor_msgs/CameraInfo.h>
 
 #include <prophesee_driver.h>
@@ -44,6 +49,9 @@ private:
 
     /// \brief Publishes external triggers
     void publishExtTrigger();
+
+    void processEventBuffer();
+    std::mutex event_buffer_mutex_;
 
     /// \brief Node handler - the access point to communication with ROS
     ros::NodeHandle nh_;
