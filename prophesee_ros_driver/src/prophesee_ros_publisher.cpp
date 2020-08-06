@@ -19,6 +19,7 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+
 PropheseeWrapperPublisher::PropheseeWrapperPublisher():
     nh_("~"),
     biases_file_(""),
@@ -60,7 +61,7 @@ PropheseeWrapperPublisher::PropheseeWrapperPublisher():
         pub_imu_events_ = nh_.advertise<sensor_msgs::Imu>(topic_imu_sensor, 100);
 
     if (publish_extTrigger_)
-        pub_extTrigger_ = nh_.advertise<prophesee_event_msgs::Event>(topic_ext_trigger,1);
+        pub_extTrigger_ = nh_.advertise<prophesee_event_msgs::Event>(topic_ext_trigger,500);
 
     while (!openCamera(serial_)) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
