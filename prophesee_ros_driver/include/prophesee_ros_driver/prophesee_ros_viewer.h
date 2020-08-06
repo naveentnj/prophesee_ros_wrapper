@@ -7,6 +7,7 @@
 #ifndef PROPHESEE_ROS_VIEWER_H_
 #define PROPHESEE_ROS_VIEWER_H_
 
+#include <mutex>
 #include <ros/ros.h>
 #include <opencv2/opencv.hpp>
 
@@ -38,6 +39,7 @@ public:
     ///
     /// @return true if initialized and false otherwise
     bool isInitialized();
+    void publishCDEventsRendering();
 
 private:
     /// \brief Callback triggered when data are recieved from the camera info topic
@@ -60,6 +62,9 @@ private:
     /// It initializes CD frame generator with the sensor's width and height.
     /// It also creates the displayers.
     bool init(const unsigned int& sensor_width, const unsigned int& sensor_height);
+
+    /// \brief ROS callback that collects events
+    void eventsCallback(const prophesee_event_msgs::EventArray::ConstPtr &msgs);
 
     /// \brief Creates a displayer
     ///
@@ -108,6 +113,20 @@ private:
 
     /// \brief If visualizing gray-level frames
     bool show_graylevels_ = false;
+
+    /// \brief image that counts events in a rolling buffer. used to generate image for publishing.
+    cv::Mat display_image_;
+    
+    /// \brief image used for 
+    cv_bridge::CvImage cv_image_;
+
+    /// \brief number of events in a rendering window
+    int rendering_window_size_;
+    image_transport::Publisher rendering_pub_;
+
+    /// event buffer for buffering events 
+    std::deque<prophesee_event_msgs::Event> event_buffer_;
+    std::mutex event_buffer_mutex_;
 };
 
 #endif /* PROPHESEE_ROS_VIEWER_H_ */

@@ -14,7 +14,8 @@ PropheseeWrapperViewer::PropheseeWrapperViewer():
     cd_window_name_("CD Events"),
     gl_window_name_("GrayLevel Data"),
     display_acc_time_(5000),
-    initialized_(false)
+    initialized_(false),
+    rendering_window_size_(20000)
 {
     std::string camera_name("");
 
@@ -28,13 +29,19 @@ PropheseeWrapperViewer::PropheseeWrapperViewer():
     const std::string topic_cd_event_buffer = "/prophesee/" + camera_name + "/cd_events_buffer";
     const std::string topic_graylevel_buffer = "/prophesee/" + camera_name + "/graylevel_image";
 
+    
+    const std::string publish_topic_rendering = "/prophesee/" + camera_name + "/rendered_events";
+    image_transport::ImageTransport it_(nh_);
+    rendering_pub_ = it_.advertise(publish_topic_rendering, 1);
+
+
+
     // Subscribe to camera info topic
     sub_cam_info_ = nh_.subscribe(topic_cam_info, 1, &PropheseeWrapperViewer::cameraInfoCallback, this);
 
     // Subscribe to CD buffer topic
     if (show_cd_) {
-        callback displayerCDCallback = boost::bind(&CDFrameGenerator::add_events, &cd_frame_generator_, _1);
-        sub_cd_events_ = nh_.subscribe(topic_cd_event_buffer, 500, displayerCDCallback);
+        sub_cd_events_ = nh_.subscribe(topic_cd_event_buffer, 2, &PropheseeWrapperViewer::eventsCallback, this);
     }
 
     // Subscribe to gray-level event buffer topic
@@ -42,17 +49,45 @@ PropheseeWrapperViewer::PropheseeWrapperViewer():
         sub_gl_frame_ = it_.subscribe(topic_graylevel_buffer, 1, &PropheseeWrapperViewer::glFrameCallback, this);
 }
 
+void PropheseeWrapperViewer::eventsCallback(const prophesee_event_msgs::EventArray::ConstPtr &msgs)
+{
+    if (rendering_pub_.getNumSubscribers() == 0 || !initialized_)
+        return;
+
+    std::unique_lock<std::mutex> lock(event_buffer_mutex_);
+    for (auto &e : msgs->events)
+    {
+        event_buffer_.push_back(e);
+        cv::Point pt(e.x,e.y);
+        display_image_.at<int>(pt) +=  40*(2*int(e.polarity)-1);
+        cv_image_.image.at<uint8_t>(pt) = std::min(display_image_.at<int>(pt), 255);
+        
+
+        if (event_buffer_.size()>rendering_window_size_)
+        {    
+            auto &e_last = event_buffer_[0];
+            cv::Point pt_last(e_last.x, e_last.y);
+            display_image_.at<int>(pt_last) -=  40*(2*int(e_last.polarity)-1);
+            cv_image_.image.at<uint8_t>(pt_last) = std::max(display_image_.at<int>(pt_last), 0);
+            event_buffer_.pop_front();
+        }
+    }
+    cv_image_.header.stamp = event_buffer_[event_buffer_.size()-1].ts;
+}
+
+void PropheseeWrapperViewer::publishCDEventsRendering()
+{
+    if (event_buffer_.size()<rendering_window_size_)
+        return;
+
+    std::unique_lock<std::mutex> lock(event_buffer_mutex_);
+    rendering_pub_.publish(cv_image_.toImageMsg());
+}
+
 PropheseeWrapperViewer::~PropheseeWrapperViewer() {
     if (!initialized_)
         return;
-
-    // Stop the CD frame generator thread
-    if (show_cd_)
-        cd_frame_generator_.stop();
-
-    // Destroy the windows
-    cv::destroyAllWindows();
-
+        
     nh_.shutdown();
 }
 
@@ -81,15 +116,11 @@ void PropheseeWrapperViewer::glFrameCallback(const sensor_msgs::ImageConstPtr& m
 }
 
 bool PropheseeWrapperViewer::init(const unsigned int& sensor_width, const unsigned int& sensor_height) {
-    if (show_cd_) {
-        // Define the display window for CD events
-        create_window(cd_window_name_, sensor_width, sensor_height, 0, 0);
-        // Initialize CD frame generator
-        cd_frame_generator_.init(sensor_width, sensor_height);
-        cd_frame_generator_.set_display_accumulation_time_us(display_acc_time_);
-        // Start CD frame generator thread
-        cd_frame_generator_.start();
-    }
+    cv_image_.image = cv::Mat(sensor_height, sensor_width, CV_8U);
+    cv_image_.image = cv::Scalar(127);
+    cv_image_.encoding = "mono8";
+    display_image_ = cv::Mat(sensor_height, sensor_width, CV_32S);;
+    display_image_ = cv::Scalar(127);
 
     if (show_graylevels_) {
         // Define the display window for gray-level frame
@@ -109,32 +140,6 @@ void PropheseeWrapperViewer::create_window(const std::string &window_name, const
     cv::moveWindow(window_name, shift_x, shift_y);
 }
 
-void PropheseeWrapperViewer::showData() {
-    if (!show_cd_)
-        return;
-
-    if (cd_frame_generator_.get_last_ros_timestamp() < ros::Time::now() - ros::Duration(0.5)) {
-        cd_frame_generator_.reset();
-        initialized_ = false;
-    }
-
-    const auto &cd_frame = cd_frame_generator_.get_current_frame();
-    if (!cd_frame.empty()) {
-        cv::imshow(cd_window_name_, cd_frame);
-    }
-}
-
-int process_ui_for(const int& delay_ms) {
-    auto then = std::chrono::high_resolution_clock::now();
-    int key   = cv::waitKey(delay_ms);
-    auto now  = std::chrono::high_resolution_clock::now();
-    // cv::waitKey will not wait if no window is opened, so we wait for him, if needed
-    std::this_thread::sleep_for(std::chrono::milliseconds(
-        delay_ms - std::chrono::duration_cast<std::chrono::milliseconds>(now - then).count()));
-
-    return key;
-}
-
 int main(int argc, char **argv) {
     ros::init(argc, argv, "prophesee_ros_viewer");
 
@@ -144,12 +149,14 @@ int main(int argc, char **argv) {
         ros::spinOnce();
     }
 
+    ros::Rate loop_rate(100);
     while (ros::ok()) {
         ros::spinOnce();
 
-        wv.showData();
+        wv.publishCDEventsRendering();
 
-        process_ui_for(33);
+        loop_rate.sleep();
+
     }
 
     ros::shutdown();
