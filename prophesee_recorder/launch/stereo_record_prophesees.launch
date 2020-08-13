@@ -11,7 +11,7 @@
     <arg name="event_packet_size" default="100000"/>
     <arg name="imu_packet_size" default="1000"/>
     <arg name="output_root" default=""/>
-    <arg name="v" default="0"/>
+    <arg name="v" default="1"/>
     
 
   <!-- Recorder left -->
@@ -20,8 +20,8 @@
     --event_topic=$(arg events_topic_left)
     --trigger_topic=$(arg trigger_topic_left)
     --output_root=$(arg output_root)
-    --v=$(arg v)
-    " output="screen"/>
+    --subfolder=left
+    --v=$(arg v)" output="screen"/>
 
   <!-- Recorder right -->
   <node name="prophesee_recorder_right" pkg="prophesee_recorder" type="prophesee_recorder_node" args="
@@ -29,6 +29,6 @@
     --event_topic=$(arg events_topic_right)
     --trigger_topic=$(arg trigger_topic_right)
     --output_root=$(arg output_root)
-    " output="screen"/>
+    --subfolder=right" output="screen"/>
 
 </launch>
