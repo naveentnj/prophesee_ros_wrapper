@@ -271,6 +271,10 @@ void PropheseeWrapperPublisher::publishCDEvents() {
                         auto inserter = std::back_inserter(event_buffer_);
                         activity_filter_->process_output(ev_begin, ev_end, inserter);
                     }
+                    else {
+                        auto inserter = std::back_inserter(event_buffer_);
+                        std::copy(ev_begin, ev_end, inserter);
+                    }
 
                     /** Get the last time stamp **/
                     event_buffer_current_time_.fromNSec(start_timestamp_.toNSec() + (ev_end-1)->t * 1000.00);
