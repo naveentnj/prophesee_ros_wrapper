@@ -4,8 +4,6 @@
 
 #include "prophesee_recorder.h"
 
-DEFINE_string(input_bag, "", 
-              "[Optional] Absolute path to rosbag that should be converted.");
 DEFINE_string(imu_topic, "/prophesee/camera/left/imu", 
               "Topic of imu msgs.");
 DEFINE_string(event_topic, "/prophesee/camera/left/cd_events_buffer", 
@@ -27,13 +25,12 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
   ros::NodeHandle nh_private("~");
  
-  prophesee_recorder::PropheseeRecorder prophesee_recorder(nh, nh_private, FLAGS_input_bag, 
-                                                    FLAGS_imu_topic, 
-                                                    FLAGS_trigger_topic,
-                                                    FLAGS_event_topic);
+  prophesee_recorder::PropheseeRecorder prophesee_recorder(nh, nh_private, 
+                                                           FLAGS_imu_topic, 
+                                                           FLAGS_trigger_topic,
+                                                           FLAGS_event_topic);
 
-  if (FLAGS_input_bag.empty())
-    ros::spin();
+  ros::spin();
 
   return 0;
 }
