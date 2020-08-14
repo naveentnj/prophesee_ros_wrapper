@@ -170,10 +170,10 @@ int PropheseeRecorder::processImuMsgs(ros::Time t0, ros::Time t1)
 
         num_imu_msgs++;
     }
-    char buffer[10];
+    char buffer[11];
     std::snprintf(buffer, sizeof(buffer), "%010d", imu_counter_);
     std::string output_file_name = imu_data_folder_ + std::string(buffer) + ".npz";
-
+    
     cnpy::npz_save(output_file_name, "t", &time_data[0], {num_imu_msgs}, "w");
     cnpy::npz_save(output_file_name, "angular_velocity", &angular_velocity_data[0], {num_imu_msgs, 3}, "a");
     cnpy::npz_save(output_file_name, "linear_acceleration", &linear_acceleration_data[0], {num_imu_msgs, 3}, "a");
@@ -223,7 +223,7 @@ int PropheseeRecorder::processEvents(ros::Time t0, ros::Time t1)
     }
 
     // do stuff about saving file
-    char buffer[10];
+    char buffer[11];
     std::snprintf(buffer, sizeof(buffer), "%010d", event_counter_);
     std::string output_file_name = event_data_folder_ + std::string(buffer) + ".npz";
 
