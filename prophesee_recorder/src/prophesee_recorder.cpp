@@ -176,8 +176,10 @@ int PropheseeRecorder::processImuMsgs(ros::Time t0, ros::Time t1)
 
         num_imu_msgs++;
     }
+    char buffer[10];
+    std::snprintf(buffer, sizeof(buffer), "%010d", imu_counter_);
+    std::string output_file_name = imu_data_folder_ + std::string(buffer) + ".npz";
 
-    std::string output_file_name = imu_data_folder_ + "imu" + std::to_string(imu_counter_) + ".npz";
     cnpy::npz_save(output_file_name, "t", &time_data[0], {num_imu_msgs}, "w");
     cnpy::npz_save(output_file_name, "orientation", &orientation_data[0], {num_imu_msgs,4}, "a");
     cnpy::npz_save(output_file_name, "angular_velocity", &angular_velocity_data[0], {num_imu_msgs, 3}, "a");
@@ -228,7 +230,10 @@ int PropheseeRecorder::processEvents(ros::Time t0, ros::Time t1)
     }
 
     // do stuff about saving file
-    std::string output_file_name = event_data_folder_ + "events" + std::to_string(event_counter_) + ".npz";
+    char buffer[10];
+    std::snprintf(buffer, sizeof(buffer), "%010d", event_counter_);
+    std::string output_file_name = event_data_folder_ + std::string(buffer) + ".npz";
+
     cnpy::npz_save(output_file_name, "t", &event_t_data[0], {num_events}, "w");
     cnpy::npz_save(output_file_name, "xy", &event_xy_data[0], {num_events,2}, "a");
     cnpy::npz_save(output_file_name, "p", &event_p_data[0], {num_events}, "a");
