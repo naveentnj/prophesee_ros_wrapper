@@ -9,8 +9,6 @@
     events_topic_left:=/prophesee/camera/left/cd_events_buffer \
     imu_topic_left:=/prophesee/camera/left/imu \
     trigger_topic_left:=/prophesee/camera/left/extTrigger \    
-    event_packet_size:=100000 \
-    imu_packet_size:=1000 \
     v:=1                                      
 '''
 

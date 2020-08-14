@@ -144,9 +144,8 @@ int PropheseeRecorder::processImuMsgs(ros::Time t0, ros::Time t1)
             << " and t1=" << imu_msgs_[imu_msgs_.size()-1].header.stamp.toNSec() - first_trigger_timestamp_.toNSec();
 
     std::vector<uint32_t> time_data;
-    std::vector<float> orientation_data;
-    std::vector<float> linear_velocity_data;
-    std::vector<float> angular_velocity_data;
+    std::vector<double> linear_acceleration_data;
+    std::vector<double> angular_velocity_data;
 
     // process all imu msgs uf to t1
     unsigned long num_imu_msgs = 0;
@@ -159,18 +158,13 @@ int PropheseeRecorder::processImuMsgs(ros::Time t0, ros::Time t1)
         uint32_t timestamp = (m.header.stamp.toSec() - first_trigger_timestamp_.toSec())*1e6;
         time_data.push_back(timestamp);
 
-        orientation_data.push_back(m.orientation.x);
-        orientation_data.push_back(m.orientation.y);
-        orientation_data.push_back(m.orientation.z);
-        orientation_data.push_back(m.orientation.w);
-
         angular_velocity_data.push_back(m.angular_velocity.x);
         angular_velocity_data.push_back(m.angular_velocity.y);
         angular_velocity_data.push_back(m.angular_velocity.z);
 
-        linear_velocity_data.push_back(m.linear_acceleration.x);
-        linear_velocity_data.push_back(m.linear_acceleration.y);
-        linear_velocity_data.push_back(m.linear_acceleration.z);
+        linear_acceleration_data.push_back(m.linear_acceleration.x);
+        linear_acceleration_data.push_back(m.linear_acceleration.y);
+        linear_acceleration_data.push_back(m.linear_acceleration.z);
 
         imu_msgs_.pop_front();
 
@@ -181,9 +175,8 @@ int PropheseeRecorder::processImuMsgs(ros::Time t0, ros::Time t1)
     std::string output_file_name = imu_data_folder_ + std::string(buffer) + ".npz";
 
     cnpy::npz_save(output_file_name, "t", &time_data[0], {num_imu_msgs}, "w");
-    cnpy::npz_save(output_file_name, "orientation", &orientation_data[0], {num_imu_msgs,4}, "a");
     cnpy::npz_save(output_file_name, "angular_velocity", &angular_velocity_data[0], {num_imu_msgs, 3}, "a");
-    cnpy::npz_save(output_file_name, "linear_velocity", &linear_velocity_data[0], {num_imu_msgs, 3}, "a");
+    cnpy::npz_save(output_file_name, "linear_acceleration", &linear_acceleration_data[0], {num_imu_msgs, 3}, "a");
 
     imu_counter_++;
 
