@@ -8,8 +8,6 @@
     <arg name="imu_topic_left" default="/prophesee/camera/left/imu"/>
     <arg name="trigger_topic_left" default="/prophesee/camera/left/extTrigger"/>
     
-    <arg name="event_packet_size" default="100000"/>
-    <arg name="imu_packet_size" default="1000"/>
     <arg name="output_root" default=""/>
     <arg name="v" default="1"/>
     
