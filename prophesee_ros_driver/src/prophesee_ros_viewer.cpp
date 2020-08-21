@@ -14,7 +14,7 @@ PropheseeWrapperViewer::PropheseeWrapperViewer():
     cd_window_name_("CD Events"),
     gl_window_name_("GrayLevel Data"),
     display_acc_time_(5000),
-    initialized_(false),
+    initialized_(false)
 {
     std::string camera_name("");
 
