@@ -121,7 +121,6 @@ private:
     cv_bridge::CvImage cv_image_;
 
     /// \brief number of events in a rendering window
-    int rendering_window_size_;
     image_transport::Publisher rendering_pub_;
 
     /// event buffer for buffering events 

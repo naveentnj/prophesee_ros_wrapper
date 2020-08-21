@@ -17,6 +17,5 @@
   <depend>glog_catkin</depend>
   <depend>gflags_catkin</depend>
   <depend>prophesee_event_msgs</depend>
-  <depend>cnpy_catkin</depend>
   <depend>prophesee_driver</depend>
 </package>

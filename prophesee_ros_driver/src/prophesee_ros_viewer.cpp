@@ -15,7 +15,6 @@ PropheseeWrapperViewer::PropheseeWrapperViewer():
     gl_window_name_("GrayLevel Data"),
     display_acc_time_(5000),
     initialized_(false),
-    rendering_window_size_(20000)
 {
     std::string camera_name("");
 
@@ -24,17 +23,13 @@ PropheseeWrapperViewer::PropheseeWrapperViewer():
     nh_.getParam("show_cd", show_cd_);
     nh_.getParam("show_graylevels", show_graylevels_);
     nh_.getParam("display_accumulation_time", display_acc_time_);
-
     const std::string topic_cam_info = "/prophesee/" + camera_name + "/camera_info";
     const std::string topic_cd_event_buffer = "/prophesee/" + camera_name + "/cd_events_buffer";
     const std::string topic_graylevel_buffer = "/prophesee/" + camera_name + "/graylevel_image";
 
-    
     const std::string publish_topic_rendering = "/prophesee/" + camera_name + "/rendered_events";
     image_transport::ImageTransport it_(nh_);
     rendering_pub_ = it_.advertise(publish_topic_rendering, 1);
-
-
 
     // Subscribe to camera info topic
     sub_cam_info_ = nh_.subscribe(topic_cam_info, 1, &PropheseeWrapperViewer::cameraInfoCallback, this);
@@ -63,7 +58,7 @@ void PropheseeWrapperViewer::eventsCallback(const prophesee_event_msgs::EventArr
         cv_image_.image.at<uint8_t>(pt) = std::min(display_image_.at<int>(pt), 255);
         
 
-        if (event_buffer_.size()>rendering_window_size_)
+        if (event_buffer_.size()>display_acc_time_)
         {    
             auto &e_last = event_buffer_[0];
             cv::Point pt_last(e_last.x, e_last.y);
@@ -77,7 +72,7 @@ void PropheseeWrapperViewer::eventsCallback(const prophesee_event_msgs::EventArr
 
 void PropheseeWrapperViewer::publishCDEventsRendering()
 {
-    if (event_buffer_.size()<rendering_window_size_)
+    if (event_buffer_.size()<display_acc_time_)
         return;
 
     std::unique_lock<std::mutex> lock(event_buffer_mutex_);
@@ -85,10 +80,11 @@ void PropheseeWrapperViewer::publishCDEventsRendering()
 }
 
 PropheseeWrapperViewer::~PropheseeWrapperViewer() {
+    nh_.shutdown();
+    rendering_pub_.shutdown();
+
     if (!initialized_)
         return;
-        
-    nh_.shutdown();
 }
 
 bool PropheseeWrapperViewer::isInitialized() {
@@ -142,7 +138,6 @@ void PropheseeWrapperViewer::create_window(const std::string &window_name, const
 
 int main(int argc, char **argv) {
     ros::init(argc, argv, "prophesee_ros_viewer");
-
     PropheseeWrapperViewer wv;
 
     while(ros::ok() && !wv.isInitialized()) {
