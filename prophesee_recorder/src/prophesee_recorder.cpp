@@ -93,14 +93,7 @@ void PropheseeRecorder::run()
         rate.sleep();
         // if trigger_events_[trigger_counter_] is no longer 
         // the last trigger, package and increment counter
-        if (trigger_events_.empty() || trigger_events_.size()-1 <= trigger_counter_)
-            continue;
-
-        // check if the most recent timestamp of imu msgs and event msgs are more recent
-        // than the next trigger
-        if (events_.empty() || imu_msgs_.empty() ||
-                events_[events_.size()-1].ts < trigger_events_[trigger_counter_+1].ts ||
-            imu_msgs_[imu_msgs_.size()-1].header.stamp < trigger_events_[trigger_counter_+1].ts)
+        if (trigger_events_.size()<2)
             continue;
 
         // for the first trigger, set the first timestamp
@@ -108,12 +101,13 @@ void PropheseeRecorder::run()
         if (trigger_counter_ == 0)
             first_trigger_timestamp_ = trigger_events_.front().ts;
 
-        VLOG(1) << trigger_events_.size()-1 - trigger_counter_ << " new triggers found.";
-
-        for (int curr_counter=trigger_counter_; curr_counter<trigger_events_.size()-1; curr_counter++)
+        while (!(events_.empty() || imu_msgs_.empty() ||
+               events_[events_.size()-1].ts < trigger_events_[trigger_counter_+1].ts ||
+               imu_msgs_[imu_msgs_.size()-1].header.stamp < trigger_events_[trigger_counter_+1].ts||
+               trigger_counter_+1>=trigger_events_.size()))
         {
-            ros::Time trigger_timestamp_first = trigger_events_[curr_counter].ts;
-            ros::Time trigger_timestamp_last = trigger_events_[curr_counter+1].ts;
+            ros::Time trigger_timestamp_first = trigger_events_[trigger_counter_].ts;
+            ros::Time trigger_timestamp_last = trigger_events_[trigger_counter_+1].ts;
 
             VLOG(2) << "Processing data between t0=" << trigger_timestamp_first.toNSec() - first_trigger_timestamp_.toNSec()
                                << " and t1=" << trigger_timestamp_last.toNSec() - first_trigger_timestamp_.toNSec();
@@ -122,9 +116,9 @@ void PropheseeRecorder::run()
             int num_event_msgs = processEvents(trigger_timestamp_first, trigger_timestamp_last);
 
             VLOG(1) << "Processed " << num_imu_msgs << " imu messages and " << num_event_msgs << " events.";
-        }
 
-        trigger_counter_ = trigger_events_.size()-1;
+            trigger_counter_++;
+        }
     }
 }
 
