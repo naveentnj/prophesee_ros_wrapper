@@ -8,7 +8,6 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <hdf5/serial/H5Cpp.h>
-#include <cnpy.h>
 
 #include "prophesee_recorder.h"
 
