@@ -7,6 +7,7 @@
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <hdf5/serial/H5Cpp.h>
 #include <cnpy.h>
 
 #include "prophesee_recorder.h"
@@ -32,9 +33,24 @@ PropheseeRecorder::~PropheseeRecorder()
         trigger_p_data[i+0] = int(trigger_events_[i].polarity);
     }
 
-    std::string output_file_name = event_subroot_folder_ + "/triggers.npz";
-    cnpy::npz_save(output_file_name, "t", &trigger_t_data[0], {trigger_events_.size()}, "w");
-    cnpy::npz_save(output_file_name, "p", &trigger_p_data[0], {trigger_events_.size()}, "a");
+    // write data into hdf5
+    auto* file = new H5::H5File(event_subroot_folder_ + "/triggers.h5", H5F_ACC_TRUNC);
+    hsize_t dimsf[1] = {trigger_events_.size()};
+
+    // write t
+    auto* dataspace = new H5::DataSpace(1, dimsf);
+    auto* dataset = new H5::DataSet(file->createDataSet("t", H5::PredType::NATIVE_UINT32, *dataspace));
+    dataset->write(&trigger_t_data[0], H5::PredType::NATIVE_UINT32);
+
+    // write p
+    dataspace = new H5::DataSpace(1, dimsf);
+    dataset = new H5::DataSet(file->createDataSet("p", H5::PredType::NATIVE_UINT8, *dataspace));
+    dataset->write(&trigger_p_data[0], H5::PredType::NATIVE_UINT8);
+
+    delete dataset;
+    delete dataspace;
+    file->close();
+    delete file;
 }
 
 
@@ -164,15 +180,42 @@ int PropheseeRecorder::processImuMsgs(ros::Time t0, ros::Time t1)
 
         num_imu_msgs++;
     }
+    // write data into hdf5
     char buffer[11];
     std::snprintf(buffer, sizeof(buffer), "%010d", imu_counter_);
-    std::string output_file_name = imu_data_folder_ + std::string(buffer) + ".npz";
-    
-    cnpy::npz_save(output_file_name, "t", &time_data[0], {num_imu_msgs}, "w");
-    cnpy::npz_save(output_file_name, "angular_velocity", &angular_velocity_data[0], {num_imu_msgs, 3}, "a");
-    cnpy::npz_save(output_file_name, "linear_acceleration", &linear_acceleration_data[0], {num_imu_msgs, 3}, "a");
-
+    auto* file = new H5::H5File(imu_data_folder_ + std::string(buffer) + ".h5", H5F_ACC_TRUNC);
     imu_counter_++;
+
+    // write t
+    hsize_t dimsf[1] = {num_imu_msgs};
+    auto* dataspace1 = new H5::DataSpace(1, dimsf);
+    auto* dataset1 = new H5::DataSet(file->createDataSet("t", H5::PredType::NATIVE_UINT32, *dataspace1));
+    dataset1->write(&time_data[0], H5::PredType::NATIVE_UINT32);
+
+    dataset1->close();
+    dataspace1->close();
+    delete dataspace1;
+    delete dataset1;
+
+    // write angular velocity
+    hsize_t dimsf3[2] = {num_imu_msgs, 3};
+    auto* dataspace3 = new H5::DataSpace(2, dimsf3);
+    auto* dataset3 = new H5::DataSet(file->createDataSet("angular_velocity", H5::PredType::NATIVE_DOUBLE, *dataspace3));
+    dataset3->write(&angular_velocity_data[0], H5::PredType::NATIVE_DOUBLE);
+    dataspace3->close();
+    dataset3->close();
+
+    // write angular velocity
+    dataspace3 = new H5::DataSpace(2, dimsf3);
+    dataset3 = new H5::DataSet(file->createDataSet("linear_acceleration", H5::PredType::NATIVE_DOUBLE, *dataspace3));
+    dataset3->write(&linear_acceleration_data[0], H5::PredType::NATIVE_DOUBLE);
+
+    file->close();
+    dataspace3->close();
+    dataset3->close();
+
+    delete dataspace3;
+    delete file;
 
     return num_imu_msgs;
 }
@@ -219,13 +262,43 @@ int PropheseeRecorder::processEvents(ros::Time t0, ros::Time t1)
     // do stuff about saving file
     char buffer[11];
     std::snprintf(buffer, sizeof(buffer), "%010d", event_counter_);
-    std::string output_file_name = event_data_folder_ + std::string(buffer) + ".npz";
-
-    cnpy::npz_save(output_file_name, "t", &event_t_data[0], {num_events}, "w");
-    cnpy::npz_save(output_file_name, "xy", &event_xy_data[0], {num_events,2}, "a");
-    cnpy::npz_save(output_file_name, "p", &event_p_data[0], {num_events}, "a");
-
+    auto* file = new H5::H5File(event_data_folder_ + std::string(buffer) + ".h5", H5F_ACC_TRUNC);
     event_counter_++;
+
+    // write t
+    hsize_t dimsf[1] = {num_events};
+    auto* dataspace1 = new H5::DataSpace(1, dimsf);
+    auto* dataset1 = new H5::DataSet(file->createDataSet("t", H5::PredType::NATIVE_UINT32, *dataspace1));
+    dataset1->write(&event_t_data[0], H5::PredType::NATIVE_UINT32);
+
+    dataspace1->close();
+    dataset1->close();
+    delete dataspace1;
+    delete dataset1;
+
+    // write xy
+    hsize_t dimsf2[2] = {num_events, 2};
+    auto* dataspace2 = new H5::DataSpace(2, dimsf2);
+    auto* dataset2 = new H5::DataSet(file->createDataSet("xy", H5::PredType::NATIVE_UINT16, *dataspace2));
+    dataset2->write(&event_xy_data[0], H5::PredType::NATIVE_UINT16);
+
+    dataspace2->close();
+    dataset2->close();
+    delete dataspace2;
+    delete dataset2;
+
+    // write p
+    auto* dataspace3 = new H5::DataSpace(2, dimsf);
+    auto* dataset3 = new H5::DataSet(file->createDataSet("p", H5::PredType::NATIVE_UINT8, *dataspace3));
+    dataset3->write(&event_p_data[0], H5::PredType::NATIVE_UINT8);
+
+    dataspace3->close();
+    dataset3->close();
+    file->close();
+
+    delete dataspace3;
+    delete dataset3;
+    delete file;
 
     return num_events;
 }
