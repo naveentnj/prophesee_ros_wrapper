@@ -42,6 +42,7 @@ PropheseeWrapperPublisher::PropheseeWrapperPublisher():
     nh_.getParam("graylevel_frame_rate", graylevel_rate_);
     nh_.getParam("event_streaming_rate", event_streaming_rate_);
     nh_.getParam("activity_filter_temporal_depth", activity_filter_temporal_depth_);
+    nh_.getParam("raw_file_path", raw_file_path_);
 
     const std::string topic_cam_info = "/prophesee/" + camera_name_ + "/camera_info";
     const std::string topic_cd_event_buffer = "/prophesee/" + camera_name_ + "/cd_events_buffer";
@@ -113,6 +114,8 @@ PropheseeWrapperPublisher::PropheseeWrapperPublisher():
 
 PropheseeWrapperPublisher::~PropheseeWrapperPublisher() {
     camera_.stop();
+    if (shouldRecord())
+        camera_.stop_recording();
 
     nh_.shutdown();
 
@@ -145,24 +148,6 @@ bool PropheseeWrapperPublisher::openCamera(std::string serial = "") {
 
 void PropheseeWrapperPublisher::startPublishing() {
     camera_.start();
-    start_timestamp_ = ros::Time::now();
-    last_timestamp_ = start_timestamp_;
-
-    if (publish_cd_)
-        publishCDEvents();
-
-    if (publish_graylevels_)
-        publishGrayLevels();
-
-    if (publish_imu_) {
-        /** We need to enable the IMU sensor **/
-        camera_.imu_sensor().enable();
-
-        /** The class method with the callback **/
-        publishIMUEvents();
-    }
-    if (publish_extTrigger_)
-        publishExtTrigger();
 
     ros::Rate loop_rate(100);
 
@@ -379,12 +364,46 @@ void PropheseeWrapperPublisher::publishExtTrigger() {
     }
 }
 
+void PropheseeWrapperPublisher::setup() {
+    start_timestamp_ = ros::Time::now();
+    last_timestamp_ = start_timestamp_;
+
+    if (!shouldRecord()) {
+        if (publish_cd_)
+            publishCDEvents();
+
+        if (publish_graylevels_)
+            publishGrayLevels();
+
+        if (publish_imu_) {
+            /** We need to enable the IMU sensor **/
+            camera_.imu_sensor().enable();
+
+            /** The class method with the callback **/
+            publishIMUEvents();
+        }
+    }
+    if (publish_extTrigger_)
+        publishExtTrigger();
+}
+
+void PropheseeWrapperPublisher::startRecording() {
+    camera_.start();
+    camera_.start_recording(raw_file_path_);
+}
 
 int main(int argc, char **argv) {
     ros::init(argc, argv, "prophesee_ros_publisher");
 
     PropheseeWrapperPublisher wp;
-    wp.startPublishing();
+    wp.setup();
+
+    if (wp.shouldRecord()) {
+        wp.startRecording();
+    }
+    else {
+        wp.startPublishing();
+    }
 
     ros::shutdown();
 

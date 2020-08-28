@@ -1,5 +1,5 @@
 <launch>
-
+  <arg name="raw_file_path" default=""/>
   <node pkg="prophesee_ros_driver" type="prophesee_ros_publisher" name="prophesee_ros_publisher" respawn="false" output="screen">
 
     <param name="camera_name" value="camera" />
@@ -7,6 +7,7 @@
     <param name="publish_graylevels" value="false" />
     <param name="publish_imu" value="true" />
     <param name="publish_extTrigger" value="true" />
+    <param name="raw_file_path" value=$(arg raw_file_path) />
 
     <!-- Path to the file with the camera settings -->
     <!--param name="bias_file" value="$(find prophesee_ros_driver)/cfg/gen3_low_sensitive_settings.bias" /-->

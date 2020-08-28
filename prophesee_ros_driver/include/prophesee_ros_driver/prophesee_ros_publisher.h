@@ -33,6 +33,17 @@ public:
     /// \brief Starts the camera and starts publishing data
     void startPublishing();
 
+    /// \brief start recording to .raw file
+    void startRecording();
+
+    /// \brief setup callback in camera
+    void setup();
+
+    /// \brief wether we should record
+    bool inline shouldRecord() {
+        return !raw_file_path_.empty();
+    };
+
 private:
 
     /// \brief Opens the camera
@@ -148,6 +159,9 @@ private:
     /// \brief delta time of cd events fixed by Prophesee driver
     /// The delta time is set to a fixed number of 64 microseconds (1e-06)
     static constexpr double EVENT_DEFAULT_DELTA_T = 6.4e-05;
+
+    /// \brief where to write .raw file
+    std::string raw_file_path_;
 };
 
 #endif /* PROPHESEE_ROS_PUBLISHER_H_ */
