@@ -7,7 +7,7 @@
     <param name="publish_graylevels" value="false" />
     <param name="publish_imu" value="true" />
     <param name="publish_extTrigger" value="true" />
-    <param name="serialnumber: " value="$(arg left)" type="string"/>
+    <param name="serial" value="$(arg left)" type="string"/>
 
     <!-- Path to the file with the camera settings -->
     <!--param name="bias_file" value="$(find prophesee_ros_driver)/cfg/gen3_low_sensitive_settings.bias" /-->
@@ -33,7 +33,7 @@
     <param name="publish_graylevels" value="false" />
     <param name="publish_imu" value="true" />
     <param name="publish_extTrigger" value="true" />
-    <param name="serialnumber: " value="$(arg right)" type="string"/>
+    <param name="serial" value="$(arg right)" type="string"/>
 
     <!-- Path to the file with the camera settings -->
     <!--param name="bias_file" value="$(find prophesee_ros_driver)/cfg/gen3_low_sensitive_settings.bias" /-->
