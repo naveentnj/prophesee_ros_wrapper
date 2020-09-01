@@ -2,6 +2,8 @@
 
 ![Event-based vision by Prophesee](event-based_vision_PROPHESEE.png)
 
+This repo is an updated version of the --branch=milmario per 09.2020.
+
 This metapackage contains ROS driver and messages for Prophesee event-based sensors.
 The following packages and nodes are provided:
   * prophesee_ros_driver - ROS driver (a wrapper around Prophesee Driver), including
@@ -21,21 +23,21 @@ Supported Prophesee EVK:
   * First of all, you would need to install dependencies, such as Prophesee Driver SDK. Prophesee Driver SDK can be downloaded from our Knowledge Center. In case if you do not have an access to Knowledge Center yet, then please provide us a short decription of your research project and request an access via this webform https://www.prophesee.ai/contact-us/
 
     ```
-        sudo apt install prophesee-*
+        sudo apt install prophesee-* metavision-*
     ```
 
   * Clone the source to your catkin workspace ( [create a workspace](http://wiki.ros.org/catkin/Tutorials/create_a_workspace), if needed)
 
     ```
         cd catkin_ws/src
-        git clone https://github.com/prophesee-ai/prophesee_ros_wrapper.git
+        git clone --branch=stereo https://github.com/uzh-rpg/prophesee_ros_wrapper.git 
         cd ..
     ```
 
   * Compile
 
     ```
-        catkin_make
+        catkin_build prophesee_ros_driver
     ```
 
   * Source the workspace
@@ -48,7 +50,7 @@ Supported Prophesee EVK:
 
 ## Getting Started
   
-prophesee_ros_driver package contains the following ROS nodes:
+prophesee_ros_driver package contains the following ROS nodes (both mono and stereo options):
   * prophesee_ros_publisher
   * prophesee_ros_viewer
 
@@ -58,6 +60,7 @@ To publish data from a Prophesee camera to ROS topics:
 
   ```
         roslaunch prophesee_ros_driver prophesee_publisher.launch
+	roslaunch prophesee_ros_driver prophesee_publisher_stereo.launch left:=<serial_left> right:=<serial_right>
   ```
 
 The following topics will be published:
@@ -74,6 +77,7 @@ To visualize data from ROS topics:
 
   ```
         roslaunch prophesee_ros_driver prophesee_viewer.launch
+	roslaunch prophesee_ros_driver prophesee_viewer_stereo.launch
   ```
 
 ## Contact
