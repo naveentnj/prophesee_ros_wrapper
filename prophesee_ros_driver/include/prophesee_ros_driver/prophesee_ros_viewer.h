@@ -7,7 +7,6 @@
 #ifndef PROPHESEE_ROS_VIEWER_H_
 #define PROPHESEE_ROS_VIEWER_H_
 
-#include <mutex>
 #include <ros/ros.h>
 #include <opencv2/opencv.hpp>
 
@@ -39,7 +38,6 @@ public:
     ///
     /// @return true if initialized and false otherwise
     bool isInitialized();
-    void publishCDEventsRendering();
 
 private:
     /// \brief Callback triggered when data are recieved from the camera info topic
@@ -47,12 +45,12 @@ private:
     /// It gets width and height of the sensor and calls init() function
     ///
     /// @param msg : ROS message with the camera info
-    void cameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& msg);
+    void cameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr &msg);
 
     /// \brief Callback triggered when data are received from gray-level frame topic
     ///
     /// @param msg ROS message with teh gray-level frame
-    void glFrameCallback(const sensor_msgs::ImageConstPtr& msg);
+    void glFrameCallback(const sensor_msgs::ImageConstPtr &msg);
 
     /// \brief Initializes the frame generators and the displayers
     ///
@@ -61,10 +59,7 @@ private:
     ///
     /// It initializes CD frame generator with the sensor's width and height.
     /// It also creates the displayers.
-    bool init(const unsigned int& sensor_width, const unsigned int& sensor_height);
-
-    /// \brief ROS callback that collects events
-    void eventsCallback(const prophesee_event_msgs::EventArray::ConstPtr &msgs);
+    bool init(const unsigned int &sensor_width, const unsigned int &sensor_height);
 
     /// \brief Creates a displayer
     ///
@@ -73,8 +68,8 @@ private:
     /// @param sensor_height : Height of the window
     /// @param shift_x : Position (x shift) of the window
     /// @param shift_y : Position (y shift) of the window
-    void create_window(const std::string &window_name, const unsigned int& sensor_width,
-                       const unsigned int& sensor_height, const int &shift_x=0, const int &shift_y=0);
+    void create_window(const std::string &window_name, const unsigned int &sensor_width,
+                       const unsigned int &sensor_height, const int &shift_x = 0, const int &shift_y = 0);
 
     /// \brief Node handler - the access point to communication with ROS
     ros::NodeHandle nh_;
@@ -113,20 +108,6 @@ private:
 
     /// \brief If visualizing gray-level frames
     bool show_graylevels_ = false;
-
-    /// \brief image that counts events in a rolling buffer. used to generate image for publishing.
-    cv::Mat display_image_;
-    
-    /// \brief image used for 
-    cv_bridge::CvImage cv_image_;
-
-    /// \brief number of events in a rendering window
-    int rendering_window_size_;
-    image_transport::Publisher rendering_pub_;
-
-    /// event buffer for buffering events 
-    std::deque<prophesee_event_msgs::Event> event_buffer_;
-    std::mutex event_buffer_mutex_;
 };
 
 #endif /* PROPHESEE_ROS_VIEWER_H_ */

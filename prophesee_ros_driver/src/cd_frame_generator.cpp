@@ -6,20 +6,19 @@
 
 #include "cd_frame_generator.h"
 
-CDFrameGenerator::CDFrameGenerator() {
-}
+CDFrameGenerator::CDFrameGenerator() {}
 
 CDFrameGenerator::~CDFrameGenerator() {
     stop();
 }
 
 void CDFrameGenerator::init(long width, long height) {
-    width_ = width;
-    height_ = height;
-    pix_count_  = height_ * width_;
+    width_     = width;
+    height_    = height;
+    pix_count_ = height_ * width_;
     ts_history_.resize(pix_count_);
 
-    frame_ = cv::Mat(height_, width_, CV_8UC1, cv::Scalar(128));
+    frame_         = cv::Mat(height_, width_, CV_8UC1, cv::Scalar(128));
     frame_to_show_ = cv::Mat(height_, width_, CV_8UC1, cv::Scalar(128));
 
     initialized_ = true;
@@ -40,9 +39,7 @@ void CDFrameGenerator::add_events(const prophesee_event_msgs::EventArray::ConstP
     }
 
     if (should_process) {
-        {
-            thread_should_process_ = true;
-        }
+        { thread_should_process_ = true; }
         thread_cond_.notify_one();
     }
 
@@ -56,8 +53,8 @@ void CDFrameGenerator::reset() {
     {
         std::unique_lock<std::mutex> lock_process(processing_mutex_);
         thread_should_process_ = false;
-        last_ts_ = 0;
-        last_process_ts_ = 0;
+        last_ts_               = 0;
+        last_process_ts_       = 0;
 
         // Clean the queues with events
         events_queue_front_.clear();
@@ -90,7 +87,7 @@ void CDFrameGenerator::generate() {
         if (thread_should_stop_)
             break;
 
-        Prophesee::timestamp threshold_to_display;
+        Metavision::timestamp threshold_to_display;
         {
             std::unique_lock<std::mutex> lock(processing_mutex_);
             std::swap(events_queue_front_, events_queue_back_);
@@ -105,7 +102,7 @@ void CDFrameGenerator::generate() {
         std::unique_lock<std::mutex> lock(frame_show_mutex_);
         for (auto it = events_queue_back_.rbegin(), it_end = events_queue_back_.rend();
              it != it_end && ros_timestamp_in_us(it->ts) >= threshold_to_display; ++it) {
-            Prophesee::timestamp &p_ts = ts_history_[it->y * width_ + it->x];
+            Metavision::timestamp &p_ts = ts_history_[it->y * width_ + it->x];
             if (p_ts < ros_timestamp_in_us(it->ts)) {
                 p_ts                             = ros_timestamp_in_us(it->ts);
                 frame_.at<uint8_t>(it->y, it->x) = it->polarity ? 255 : 0;
@@ -125,7 +122,7 @@ void CDFrameGenerator::generate() {
     }
 }
 
-void CDFrameGenerator::set_display_accumulation_time_us(Prophesee::timestamp display_accumulation_time_us) {
+void CDFrameGenerator::set_display_accumulation_time_us(Metavision::timestamp display_accumulation_time_us) {
     std::lock_guard<std::mutex> lock(processing_mutex_);
     display_accumulation_time_us_ = display_accumulation_time_us;
 }
@@ -136,7 +133,7 @@ const cv::Mat &CDFrameGenerator::get_current_frame() {
     return frame_to_show_;
 }
 
-const Prophesee::timestamp &CDFrameGenerator::get_last_event_timestamp() const {
+const Metavision::timestamp &CDFrameGenerator::get_last_event_timestamp() const {
     return last_ts_;
 }
 
@@ -165,9 +162,7 @@ bool CDFrameGenerator::stop() {
         return false;
     }
 
-    {
-        thread_should_stop_ = true;
-    }
+    { thread_should_stop_ = true; }
 
     thread_cond_.notify_one();
     thread_.join();

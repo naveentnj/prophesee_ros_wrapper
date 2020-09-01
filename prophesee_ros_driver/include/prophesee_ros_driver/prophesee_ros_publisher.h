@@ -7,15 +7,10 @@
 #ifndef PROPHESEE_ROS_PUBLISHER_H_
 #define PROPHESEE_ROS_PUBLISHER_H_
 
-#include <deque>
-#include <mutex>
-#include <ros/ros.h>
-#include <prophesee_event_msgs/Event.h>
-
 #include <sensor_msgs/CameraInfo.h>
 
-#include <prophesee_driver.h>
-#include <prophesee_core/algos/core/activity_noise_filter_algorithm.h>
+#include <metavision/sdk/driver/prophesee_driver.h>
+#include <metavision/sdk/core/algorithms/activity_noise_filter_algorithm.h>
 
 #include "log_tone_mapper.h"
 
@@ -34,9 +29,8 @@ public:
     void startPublishing();
 
 private:
-
     /// \brief Opens the camera
-    bool openCamera(std::string serial);
+    bool openCamera();
 
     /// \brief Publishes CD events
     void publishCDEvents();
@@ -46,12 +40,6 @@ private:
 
     /// \brief Publishes IMU events
     void publishIMUEvents();
-
-    /// \brief Publishes external triggers
-    void publishExtTrigger();
-
-    void processEventBuffer();
-    std::mutex event_buffer_mutex_;
 
     /// \brief Node handler - the access point to communication with ROS
     ros::NodeHandle nh_;
@@ -68,18 +56,15 @@ private:
     /// \brief Publisher for IMU events
     ros::Publisher pub_imu_events_;
 
-    /// \brief Publisher for external Triggers
-    ros::Publisher pub_extTrigger_;	
-
     /// \brief Instance of Camera class
     ///
     /// Used to access data from a camera
-    Prophesee::Camera camera_;
+    Metavision::Camera camera_;
 
     /// \brief Instance of Events Array
     ///
     /// Accumulated Array of events
-    std::vector<Prophesee::EventCD> event_buffer_;
+    std::vector<Metavision::EventCD> event_buffer_;
 
     /// \brief Frame reconstruction in gray scale
     ///
@@ -95,16 +80,16 @@ private:
     sensor_msgs::CameraInfo cam_info_msg_;
 
     /// \brief Pointer for the Activity Filter Instance
-    std::shared_ptr< Prophesee::ActivityNoiseFilterAlgorithm<> > activity_filter_;
+    std::shared_ptr<Metavision::ActivityNoiseFilterAlgorithm<>> activity_filter_;
 
     /// \brief Path to the file with the camera settings (biases)
     std::string biases_file_;
 
+    /// \brief Raw file to read instead of live camera
+    std::string raw_file_to_read_;
+
     /// \brief Camera name in string format
     std::string camera_name_;
-
-    /// \brief Camera serial in string format
-    std::string serial_;
 
     /// \brief Wall time stamps
     ros::Time start_timestamp_, last_timestamp_;
@@ -124,9 +109,6 @@ private:
     /// \brief If showing IMU events
     bool publish_imu_;
 
-    /// \brief If showing external triggers
-    bool publish_extTrigger_;
-
     /// \brief Events rate (configuration)
     /// Desirable rate in Hz for the events
     double event_streaming_rate_;
@@ -141,11 +123,11 @@ private:
 
     /// \brief Event buffer time stamps
     ros::Time event_buffer_start_time_, event_buffer_current_time_;
- 
+
     /// \brief  Mean gravity value at Earth surface [m/s^2]
     static constexpr double GRAVITY = 9.81;
 
-    /// \brief delta time of cd events fixed by Prophesee driver
+    /// \brief delta time of cd events fixed by the driver
     /// The delta time is set to a fixed number of 64 microseconds (1e-06)
     static constexpr double EVENT_DEFAULT_DELTA_T = 6.4e-05;
 };
