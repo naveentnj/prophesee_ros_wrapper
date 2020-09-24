@@ -30,7 +30,7 @@ public:
 
 private:
     /// \brief Opens the camera
-    bool openCamera();
+    bool openCamera(std::string serial);
 
     /// \brief Publishes CD events
     void publishCDEvents();
@@ -40,6 +40,12 @@ private:
 
     /// \brief Publishes IMU events
     void publishIMUEvents();
+    
+    /// \brief Publishes external triggers
+    void publishExtTrigger();
+
+    void processEventBuffer();
+    std::mutex event_buffer_mutex_;
 
     /// \brief Node handler - the access point to communication with ROS
     ros::NodeHandle nh_;
@@ -55,6 +61,9 @@ private:
 
     /// \brief Publisher for IMU events
     ros::Publisher pub_imu_events_;
+    
+    /// \brief Publisher for external Triggers
+    ros::Publisher pub_extTrigger_;
 
     /// \brief Instance of Camera class
     ///
@@ -90,6 +99,9 @@ private:
 
     /// \brief Camera name in string format
     std::string camera_name_;
+    
+    /// \brief Camera serial in string format
+    std::string serial_;
 
     /// \brief Wall time stamps
     ros::Time start_timestamp_, last_timestamp_;
@@ -108,6 +120,9 @@ private:
 
     /// \brief If showing IMU events
     bool publish_imu_;
+    
+    /// \brief If showing external triggers
+    bool publish_extTrigger_;
 
     /// \brief Events rate (configuration)
     /// Desirable rate in Hz for the events

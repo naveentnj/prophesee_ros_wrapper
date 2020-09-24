@@ -31,6 +31,7 @@ PropheseeWrapperPublisher::PropheseeWrapperPublisher() :
 
     // Load Parameters
     nh_.getParam("camera_name", camera_name_);
+    nh_.getParam("serial", serial_);
     nh_.getParam("publish_cd", publish_cd_);
     nh_.getParam("publish_graylevels", publish_graylevels_);
     nh_.getParam("publish_imu", publish_imu_);
@@ -45,6 +46,7 @@ PropheseeWrapperPublisher::PropheseeWrapperPublisher() :
     const std::string topic_cd_event_buffer = "/prophesee/" + camera_name_ + "/cd_events_buffer";
     const std::string topic_gl_frame        = "/prophesee/" + camera_name_ + "/graylevel_image";
     const std::string topic_imu_sensor      = "/prophesee/" + camera_name_ + "/imu";
+    const std::string topic_ext_trigger = "/prophesee/" + camera_name_ + "/extTrigger";
 
     if (!raw_file_to_read_.empty())
         publish_imu_ = false;
@@ -60,7 +62,10 @@ PropheseeWrapperPublisher::PropheseeWrapperPublisher() :
     if (publish_imu_)
         pub_imu_events_ = nh_.advertise<sensor_msgs::Imu>(topic_imu_sensor, 100);
 
-    while (!openCamera()) {
+    if (publish_extTrigger_)
+        pub_extTrigger_ = nh_.advertise<prophesee_event_msgs::Event>(topic_ext_trigger, 500);
+
+    while (!openCamera(serial_)) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         ROS_INFO("Trying to open camera...");
     }
@@ -114,19 +119,24 @@ PropheseeWrapperPublisher::~PropheseeWrapperPublisher() {
     activity_filter_.reset();
 }
 
-bool PropheseeWrapperPublisher::openCamera() {
+bool PropheseeWrapperPublisher::openCamera(std::string serial = "") {
     bool camera_is_opened = false;
 
     // Initialize the camera instance
     try {
-        if (raw_file_to_read_.empty()) {
+        if (serial == "")
+        {
             camera_ = Metavision::Camera::from_first_available();
-
-            if (!biases_file_.empty()) {
-                ROS_INFO("[CONF] Loading bias file: %s", biases_file_.c_str());
-                camera_.biases().set_from_file(biases_file_);
-            }
-        } else {
+        }
+        else
+        {
+            camera_ = Metavision::Camera::from_serial(serial);
+        }
+		if (!biases_file_.empty()) {
+			ROS_INFO("[CONF] Loading bias file: %s", biases_file_.c_str());
+			camera_.biases().set_from_file(biases_file_);
+		}
+        else {
             camera_ = Metavision::Camera::from_file(raw_file_to_read_);
             ROS_INFO("[CONF] Reading from raw file: %s", raw_file_to_read_.c_str());
         }
@@ -154,8 +164,10 @@ void PropheseeWrapperPublisher::startPublishing() {
         /** The class method with the callback **/
         publishIMUEvents();
     }
+    if (publish_extTrigger_)
+        publishExtTrigger();
 
-    ros::Rate loop_rate(5);
+    ros::Rate loop_rate(100);
     while (ros::ok()) {
         /** Get the current max_event_rate (dynamic configuration) **/
         int new_max_event_rate;
@@ -329,6 +341,26 @@ void PropheseeWrapperPublisher::publishIMUEvents() {
 
                     ROS_DEBUG("IMU data available, buffer size: %d at time: %llu", buffer_size, ev_begin->t);
                 }
+            });
+    } catch (Metavision::CameraException &e) {
+        ROS_WARN("%s", e.what());
+        publish_cd_ = false;
+    }
+}
+
+void PropheseeWrapperPublisher::publishExtTrigger() {
+    
+    try {
+        Metavision::CallbackId extTrigger_callback = camera_.ext_trigger().add_callback(
+            [this](const Metavision::EventExtTrigger *ext_begin, const Metavision::EventExtTrigger *ext_end)
+            {
+                while(ext_begin < ext_end) {
+                    prophesee_event_msgs::Event event;
+                    event.polarity = ext_begin->p;
+                    event.ts.fromNSec(start_timestamp_.toNSec() + (ext_begin->t * 1000.00));
+                    pub_extTrigger_.publish(event);
+                    ++ext_begin;
+                    }  
             });
     } catch (Metavision::CameraException &e) {
         ROS_WARN("%s", e.what());
