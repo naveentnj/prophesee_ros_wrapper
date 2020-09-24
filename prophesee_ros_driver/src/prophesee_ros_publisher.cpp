@@ -19,10 +19,12 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+//raw_file_to_read_(""),
+//nh_.getParam("raw_file_to_read", raw_file_to_read_);
+
 PropheseeWrapperPublisher::PropheseeWrapperPublisher() :
     nh_("~"),
     biases_file_(""),
-    raw_file_to_read_(""),
     max_event_rate_(6000),
     graylevel_rate_(30),
     event_streaming_rate_(0),
@@ -35,9 +37,9 @@ PropheseeWrapperPublisher::PropheseeWrapperPublisher() :
     nh_.getParam("publish_cd", publish_cd_);
     nh_.getParam("publish_graylevels", publish_graylevels_);
     nh_.getParam("publish_imu", publish_imu_);
+    nh_.getParam("publish_extTrigger", publish_extTrigger_);
     nh_.getParam("bias_file", biases_file_);
     nh_.getParam("max_event_rate", max_event_rate_);
-    nh_.getParam("raw_file_to_read", raw_file_to_read_);
     nh_.getParam("graylevel_frame_rate", graylevel_rate_);
     nh_.getParam("event_streaming_rate", event_streaming_rate_);
     nh_.getParam("activity_filter_temporal_depth", activity_filter_temporal_depth_);
@@ -136,11 +138,6 @@ bool PropheseeWrapperPublisher::openCamera(std::string serial = "") {
 			ROS_INFO("[CONF] Loading bias file: %s", biases_file_.c_str());
 			camera_.biases().set_from_file(biases_file_);
 		}
-        else {
-            camera_ = Metavision::Camera::from_file(raw_file_to_read_);
-            ROS_INFO("[CONF] Reading from raw file: %s", raw_file_to_read_.c_str());
-        }
-
         camera_is_opened = true;
     } catch (Metavision::CameraException &e) { ROS_WARN("%s", e.what()); }
     return camera_is_opened;
