@@ -9,9 +9,8 @@
 
 #include <sensor_msgs/CameraInfo.h>
 
-#include <prophesee_driver.h>
-#include <prophesee_core/algos/core/activity_noise_filter_algorithm.h>
-
+#include <metavision/sdk/driver/prophesee_driver.h>
+#include <metavision/sdk/core/algorithms/activity_noise_filter_algorithm.h>
 #include "log_tone_mapper.h"
 
 /// \brief Main class for ROS publisher
@@ -66,12 +65,12 @@ private:
     /// \brief Instance of Camera class
     ///
     /// Used to access data from a camera
-    Prophesee::Camera camera_;
+    Metavision::Camera camera_;
 
     /// \brief Instance of Events Array
     ///
     /// Accumulated Array of events
-    std::vector<Prophesee::EventCD> event_buffer_;
+    std::vector<Metavision::EventCD> event_buffer_;
 
     /// \brief Frame reconstruction in gray scale
     ///
@@ -87,7 +86,7 @@ private:
     sensor_msgs::CameraInfo cam_info_msg_;
 
     /// \brief Pointer for the Activity Filter Instance
-    std::shared_ptr< Prophesee::ActivityNoiseFilterAlgorithm<> > activity_filter_;
+    std::shared_ptr< Metavision::ActivityNoiseFilterAlgorithm<> > activity_filter_;
 
     /// \brief Path to the file with the camera settings (biases)
     std::string biases_file_;

@@ -86,10 +86,10 @@ PropheseeWrapperPublisher::PropheseeWrapperPublisher():
 
     // Add camera runtime error callback
     camera_.add_runtime_error_callback(
-                [](const Prophesee::CameraException &e) { ROS_WARN("%s", e.what()); });
+                [](const Metavision::CameraException &e) { ROS_WARN("%s", e.what()); });
 
     // Get the sensor config
-    Prophesee::CameraConfiguration config = camera_.get_camera_configuration();
+    Metavision::CameraConfiguration config = camera_.get_camera_configuration();
     auto &geometry = camera_.geometry();
     ROS_INFO("[CONF] Width:%i, Height:%i", geometry.width(), geometry.height());
     ROS_INFO("[CONF] Max event rate, in kEv/s: %u", config.max_drop_rate_limit_kEv_s);
@@ -104,7 +104,7 @@ PropheseeWrapperPublisher::PropheseeWrapperPublisher():
 
     // Set the activity filter instance
     if (activity_filter_temporal_depth_ > 0) {
-    activity_filter_.reset(new Prophesee::ActivityNoiseFilterAlgorithm<>(camera_.geometry().width(),
+    activity_filter_.reset(new Metavision::ActivityNoiseFilterAlgorithm<>(camera_.geometry().width(),
                                                                  camera_.geometry().height(),
                                                                  activity_filter_temporal_depth_));
     }
@@ -125,18 +125,18 @@ bool PropheseeWrapperPublisher::openCamera(std::string serial = "") {
     try {
         if (serial == "")
         {
-            camera_ = Prophesee::Camera::from_first_available();
+            camera_ = Metavision::Camera::from_first_available();
         }
         else
         {
-            camera_ = Prophesee::Camera::from_serial(serial);
+            camera_ = Metavision::Camera::from_serial(serial);
         }       
         if (!biases_file_.empty()) {
             ROS_INFO("[CONF] Loading bias file: %s", biases_file_.c_str());
             camera_.biases().set_from_file(biases_file_);
         }
         camera_is_opened = true;
-    } catch (Prophesee::CameraException &e) {
+    } catch (Metavision::CameraException &e) {
         ROS_WARN("%s", e.what());
     }
     return camera_is_opened;
@@ -155,7 +155,7 @@ void PropheseeWrapperPublisher::startPublishing() {
 
     if (publish_imu_) {
         /** We need to enable the IMU sensor **/
-        camera_.imu_sensor().enable();
+        camera_.imu_module().enable();
 
         /** The class method with the callback **/
         publishIMUEvents();
@@ -201,8 +201,8 @@ void PropheseeWrapperPublisher::startPublishing() {
 void PropheseeWrapperPublisher::publishCDEvents() {
     // Initialize and publish a buffer of CD events
     try {
-        Prophesee::CallbackId cd_callback = camera_.cd().add_callback(
-            [this](const Prophesee::EventCD *ev_begin, const Prophesee::EventCD *ev_end) {
+        Metavision::CallbackId cd_callback = camera_.cd().add_callback(
+            [this](const Metavision::EventCD *ev_begin, const Metavision::EventCD *ev_end) {
                 // Check the number of subscribers to the topic
                 if (pub_cd_events_.getNumSubscribers() <= 0)
                     return;
@@ -223,7 +223,7 @@ void PropheseeWrapperPublisher::publishCDEvents() {
                     if (activity_filter_temporal_depth_ > 0){
                         /** Insert the events to the buffer **/
                         auto inserter = std::back_inserter(event_buffer_);
-                        activity_filter_->process_output(ev_begin, ev_end, inserter);
+                        activity_filter_->process(ev_begin, ev_end, inserter);
                     }
 
                     /** Get the last time stamp **/
@@ -244,7 +244,7 @@ void PropheseeWrapperPublisher::publishCDEvents() {
 
                     // Copy the events to the ros buffer format
                     auto buffer_msg_it = event_buffer_msg.events.begin();
-                    for (const Prophesee::EventCD *it = std::addressof(event_buffer_[0]);
+                    for (const Metavision::EventCD *it = std::addressof(event_buffer_[0]);
                                                 it != std::addressof(event_buffer_[event_buffer_.size()]);
                                                 ++it, ++buffer_msg_it)
                     {
@@ -265,7 +265,7 @@ void PropheseeWrapperPublisher::publishCDEvents() {
                 }
 
             });
-    } catch (Prophesee::CameraException &e) {
+    } catch (Metavision::CameraException &e) {
         ROS_WARN("%s", e.what());
         publish_cd_ = false;
     }
@@ -274,7 +274,7 @@ void PropheseeWrapperPublisher::publishCDEvents() {
 void PropheseeWrapperPublisher::publishGrayLevels() {
     // Initialize and publish a gray-level frame
     try {
-        camera_.set_exposure_frame_callback(graylevel_rate_, [this](Prophesee::timestamp t, const cv::Mat &f) {
+        camera_.set_exposure_frame_callback(graylevel_rate_, [this](Metavision::timestamp t, const cv::Mat &f) {
             // Check the number of subscribers to the topic
             if (pub_gl_frame_.getNumSubscribers() <= 0)
                 return;
@@ -291,8 +291,8 @@ void PropheseeWrapperPublisher::publishGrayLevels() {
 
             ROS_DEBUG("Graylevel data are available");
         });
-    } catch (Prophesee::CameraException &e) {
-        if (e.code().value() & Prophesee::CameraErrorCode::UnsupportedFeature)
+    } catch (Metavision::CameraException &e) {
+        if (e.code().value() & Metavision::CameraErrorCode::UnsupportedFeature)
             publish_graylevels_ = false;
         else {
             ROS_WARN("%s", e.what());
@@ -304,8 +304,8 @@ void PropheseeWrapperPublisher::publishGrayLevels() {
 void PropheseeWrapperPublisher::publishIMUEvents() {
     // Initialize and publish a buffer of IMU events
     try {
-        Prophesee::CallbackId imu_callback = camera_.imu().add_callback(
-            [this](const Prophesee::EventIMU *ev_begin, const Prophesee::EventIMU *ev_end) {
+        Metavision::CallbackId imu_callback = camera_.imu().add_callback(
+            [this](const Metavision::EventIMU *ev_begin, const Metavision::EventIMU *ev_end) {
                 if (ev_begin < ev_end)
                 {
                     const unsigned int buffer_size = ev_end - ev_begin;
@@ -337,7 +337,7 @@ void PropheseeWrapperPublisher::publishIMUEvents() {
                     ROS_DEBUG("IMU data available, buffer size: %d at time: %llu", buffer_size, ev_begin->t);
                 }
             });
-    } catch (Prophesee::CameraException &e) {
+    } catch (Metavision::CameraException &e) {
         ROS_WARN("%s", e.what());
         publish_cd_ = false;
     }
@@ -346,8 +346,8 @@ void PropheseeWrapperPublisher::publishIMUEvents() {
 void PropheseeWrapperPublisher::publishExtTrigger() {
     
     try {
-        Prophesee::CallbackId extTrigger_callback = camera_.ext_trigger().add_callback(
-            [this](const Prophesee::EventExtTrigger *ext_begin, const Prophesee::EventExtTrigger *ext_end)
+        Metavision::CallbackId extTrigger_callback = camera_.ext_trigger().add_callback(
+            [this](const Metavision::EventExtTrigger *ext_begin, const Metavision::EventExtTrigger *ext_end)
             {
                 while(ext_begin < ext_end) {
                     prophesee_event_msgs::Event event;
@@ -357,7 +357,7 @@ void PropheseeWrapperPublisher::publishExtTrigger() {
                     ++ext_begin;
                     }  
             });
-    } catch (Prophesee::CameraException &e) {
+    } catch (Metavision::CameraException &e) {
         ROS_WARN("%s", e.what());
         publish_cd_ = false;
     }

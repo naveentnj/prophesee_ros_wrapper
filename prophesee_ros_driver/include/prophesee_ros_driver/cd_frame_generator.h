@@ -12,8 +12,8 @@
 #include <atomic>
 #include <condition_variable>
 #include <opencv2/opencv.hpp>
+#include <metavision/sdk/driver/prophesee_driver.h>
 
-#include <prophesee_driver.h>
 
 #include <prophesee_event_msgs/Event.h>
 #include <prophesee_event_msgs/EventArray.h>
@@ -69,7 +69,7 @@ public:
     /// \brief Gets the last event timestamp in us
     ///
     /// \return the last event timestamp
-    const Prophesee::timestamp &get_last_event_timestamp() const;
+    const Metavision::timestamp &get_last_event_timestamp() const;
 
     /// \brief Gets ROS time of the last received event buffer
     ///
@@ -79,8 +79,8 @@ public:
     /// \brief Converts ROS time into Prophesee timestamp
     ///
     /// \return Timestamp in microseconds
-    inline Prophesee::timestamp ros_timestamp_in_us(const ros::Time &ts) const {
-        return static_cast<Prophesee::timestamp>(ts.toNSec()/1000.00);
+    inline Metavision::timestamp ros_timestamp_in_us(const ros::Time &ts) const {
+        return static_cast<Metavision::timestamp>(ts.toNSec()/1000.00);
     };
 
 private:
@@ -91,7 +91,7 @@ private:
     size_t pix_count_ = 0;
 
     // Vector of timestamps in us
-    std::vector<Prophesee::timestamp> ts_history_;
+    std::vector<Metavision::timestamp> ts_history_;
 
     // Generated image
     cv::Mat frame_;
@@ -103,10 +103,10 @@ private:
     uint32_t display_accumulation_time_us_ = 5000;
 
     // Last event timestamp in us
-    Prophesee::timestamp last_ts_ = 0, last_process_ts_ = 0;
+    Metavision::timestamp last_ts_ = 0, last_process_ts_ = 0;
 
     size_t min_events_to_process_                     = 10000;
-    Prophesee::timestamp max_delay_before_processing_ = 5000;
+    Metavision::timestamp max_delay_before_processing_ = 5000;
 
     // Received events
     std::vector<prophesee_event_msgs::Event> events_queue_front_;
